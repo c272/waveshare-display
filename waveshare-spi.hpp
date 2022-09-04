@@ -139,4 +139,18 @@ struct rect {
 	point bottom_right;
 };
 
+//Represents a single 16-bit display colour.
+struct colour16 {
+	uint8_t red : 5;
+	uint8_t green : 6;
+	uint8_t blue : 5;
+
+	//Return a uint16_t prepared for sending to display.
+	uint16_t pack() 
+	{
+		uint16_t packed = *(uint16_t*)this;
+		return (packed >> 8) + (packed << 8);
+	}
+} __attribute__((packed));
+
 } //namespace waveshare

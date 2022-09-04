@@ -31,7 +31,7 @@ class display {
 	void set_draw_window(rect window);
 	void set_update_rate(uint32_t rate);
 
-	void clear_screen(uint16_t colour);
+	void clear_screen(colour16 colour);
 	void send_pixel_data(rect draw_window, uint8_t *data, int len);
 	void send_pixel_data_async(rect draw_window, uint8_t *data, int len,
 				   codal::PVoidCallback callback = NULL);

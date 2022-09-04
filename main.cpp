@@ -11,7 +11,11 @@ int main()
     display.init();
 
     //Clear screen.
-    display.clear_screen(0xC5C5);
+    waveshare::colour16 colour;
+    colour.red = 0;
+    colour.green = 0b111111;
+    colour.blue = 0;
+    display.clear_screen(colour);
 
     while (1)
         uBit.display.scroll("DONE!");

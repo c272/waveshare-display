@@ -128,10 +128,11 @@ void display::set_update_rate(uint32_t rate)
 }
 
 //Clears the screen with a given colour.
-void display::clear_screen(uint16_t colour)
+void display::clear_screen(colour16 colour)
 {
 	//Set draw window to entire draw plane.
 	set_draw_window(area);
+	uint16_t to_send = colour.pack();
 
 	//Send RAM start command.
 	send_command(ST_OP_RAMWR);
@@ -140,8 +141,8 @@ void display::clear_screen(uint16_t colour)
 	lcd_cs->setDigitalValue(0);
 	lcd_dc->setDigitalValue(1);
 	for (int i = 0; i < WSLCD_MEM_SIZE; i++)
-		spi->transfer(reinterpret_cast<uint8_t *>(&colour),
-			      sizeof(colour), NULL, 0);
+		spi->transfer(reinterpret_cast<uint8_t *>(&to_send),
+			      sizeof(to_send), NULL, 0);
 
 	//Re-idle chip.
 	lcd_cs->setDigitalValue(1);
