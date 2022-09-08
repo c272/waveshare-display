@@ -45,7 +45,7 @@ void display::init()
 	//Create SPI interface with SPI pin references, set frequency
 	//to default of 8MB/s.
 	spi = new NRF52SPI(*mosi, *miso, *sck);
-	set_update_rate(NRF_SPIM_FREQ_8M);
+	set_spi_freq(NRF_SPIM_FREQ_8M);
 
 	//Enable backlight.
 	//todo: Using analog values with this hangs forever. Why?
@@ -59,6 +59,9 @@ void display::init()
 	set_colour_mode(colour_mode::SIXTEEN_BIT);
 	mdac_config config;
 	set_mdac_config(config);
+
+	//Set default mode 1 framerate to 99hz.
+	set_framerate(6, 1, 1);
 
 	//Enable the display.
 	set_sleep(false);
@@ -122,9 +125,18 @@ void display::set_draw_window(rect window)
 }
 
 //Sets the update rate (in bits/second) for the display.
-void display::set_update_rate(uint32_t rate)
+void display::set_spi_freq(uint32_t rate)
 {
 	spi->setFrequency(rate);
+}
+
+//Sets the framerate of the display based on a calculation of:
+//	frame_rate = 850,000 / (rtna * 2 + 40) + (162 + fpa + bpa)
+//Why is this the case? Frankly, I have no idea.
+void display::set_framerate(uint8_t rtna, uint8_t fpa, uint8_t bpa)
+{
+	uint8_t args[] = { rtna, fpa, bpa };
+	send_command(ST_OP_FRMCTR1, 0, args, sizeof(args));
 }
 
 //Clears the screen with a given colour.
@@ -134,15 +146,24 @@ void display::clear_screen(colour16 colour)
 	set_draw_window(area);
 	uint16_t to_send = colour.pack();
 
+	//Since SPI is overwhelmingly slow with single uint16 transfers,
+	//we allocate a buffer of an arbitrary size screen chunk here for speedup.
+	//The arbitrary chunk amount must make the length 16-aligned (obviously).
+	uint16_t* screen_chunk = (uint16_t*)malloc(WSLCD_MEM_SIZE / WSLCD_MEM_CHUNKS);
+	for (int i=0; i<WSLCD_MEM_SIZE / WSLCD_MEM_CHUNKS / 2; i++)
+		screen_chunk[i] = to_send;
+
 	//Send RAM start command.
 	send_command(ST_OP_RAMWR);
 
-	//Switch to data mode (LCD_DC high), transmit.
+	//Switch to data mode (LCD_DC high), transmit chunks.
 	lcd_cs->setDigitalValue(0);
 	lcd_dc->setDigitalValue(1);
-	for (int i = 0; i < WSLCD_MEM_SIZE; i++)
-		spi->transfer(reinterpret_cast<uint8_t *>(&to_send),
-			      sizeof(to_send), NULL, 0);
+	for (int i=0; i<WSLCD_MEM_CHUNKS; i++)
+		spi->transfer(reinterpret_cast<uint8_t *>(screen_chunk),
+				WSLCD_MEM_SIZE / WSLCD_MEM_CHUNKS, NULL, 0);
+
+	free(screen_chunk);
 
 	//Re-idle chip.
 	lcd_cs->setDigitalValue(1);

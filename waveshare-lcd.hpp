@@ -10,7 +10,8 @@
 
 #define WSLCD18_SIZE_X 128
 #define WSLCD18_SIZE_Y 160
-#define WSLCD_MEM_SIZE WSLCD18_SIZE_X*WSLCD18_SIZE_Y
+#define WSLCD_MEM_SIZE WSLCD18_SIZE_X*WSLCD18_SIZE_Y*2
+#define WSLCD_MEM_CHUNKS 16
 
 namespace waveshare
 {
@@ -26,10 +27,9 @@ class display {
 
 	void set_display_enabled(bool enabled);
 	void set_sleep(bool enabled);
-	void set_colour_mode(colour_mode colour_mode);
-	void set_mdac_config(mdac_config config);
 	void set_draw_window(rect window);
-	void set_update_rate(uint32_t rate);
+	void set_spi_freq(uint32_t rate);
+	void set_framerate(uint8_t rtna, uint8_t fpa, uint8_t bpa);
 
 	void clear_screen(colour16 colour);
 	void send_pixel_data(rect draw_window, uint8_t *data, int len);
@@ -39,6 +39,12 @@ class display {
 	static rect area;
 
     private:
+
+	//We don't support these outside of the driver as structs are built
+	//upon the assumption of RGB uint16 MDAC & colour mode configs.
+	void set_colour_mode(colour_mode colour_mode);
+	void set_mdac_config(mdac_config config);
+
 	void send_command(uint8_t op, int delay = 0, uint8_t *data = NULL,
 			  int len = 0);
 	void send_command_async(uint8_t op, uint8_t *data, int len,
